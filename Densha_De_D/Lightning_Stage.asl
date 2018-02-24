@@ -18,12 +18,15 @@ startup
 	vars.started = false;
 	vars.multiplier = 1;
 	vars.fps = 60.0f;
+	vars.practice = false;
+	settings.Add("practice_mode",false,"Practice mode");
+	settings.SetToolTip("practice_mode","Resets the game_time every time you redo any race, useful for practice");
 }
 
 init
 {
 	vars.nakazato_hotfix = false;
-	if (!vars.started)
+	if (!vars.started || settings["practice_mode"])
 	{
 		vars.game_time = 0;
 	}
@@ -59,9 +62,10 @@ update
 		}
 		else
 		{
-			vars.game_time += 1/60.0f;
+			vars.game_time += 1/vars.fps;
 		}
 	}
+	vars.practice = settings["practice_mode"];
 }
 
 isLoading
@@ -90,10 +94,10 @@ split
 
 start
 {
-	if (current.stage == 0 && current.mode == 130 && old.mode == 128)
+	if ((current.stage == 0 || settings["practice_mode"]) && current.mode == 130 && old.mode == 128)
 	{
 		vars.game_time = 0;
 		vars.started = true;
 	}
-	return current.stage == 0 && current.mode == 130 && old.mode == 128;
+	return (current.stage == 0 || settings["practice_mode"]) && current.mode == 130 && old.mode == 128;
 }
