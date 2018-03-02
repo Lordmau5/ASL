@@ -10,6 +10,9 @@ state("電車でＤ_LightningStage")
 	byte pause_state : 0x167EE4, 0x11;
 	float timer : 0x167EE4, 0x60, 0x18, 0x698, 0x664;
 	float game_speed : 0x167EE4, 0x710, 0x74, 0x8, 0xB4;
+	
+	//Apparently game uses this value to determine game speed in Masked Bunta :thinking:
+	float bunta_speed : 0x167EE4, 0x60, 0x18, 0x698, 0x65C;
 }
 
 startup
@@ -18,22 +21,22 @@ startup
 	vars.started = false;
 	vars.multiplier = 1;
 	vars.fps = 60.0f;
-	vars.practice = false;
-	settings.Add("practice_mode",false,"Practice mode");
-	settings.SetToolTip("practice_mode","Resets the game_time every time you redo any race, useful for practice");
 }
 
 init
 {
 	vars.nakazato_hotfix = false;
-	if (!vars.started || settings["practice_mode"])
-	{
-		vars.game_time = 0;
-	}
 }
 
 update
 {
+	//Reset game time value if real time was reset
+	if (timer.CurrentTime.RealTime.HasValue)
+	{
+		if (timer.CurrentTime.RealTime.Value.Ticks == 0)
+			vars.game_time = 0;
+	}
+	
 	if((old.cleared & 4) == 0 && (current.cleared & 4) == 4) { // Nakazato Hotfix
 		vars.nakazato_hotfix = true;
 	}
@@ -49,7 +52,11 @@ update
 			if (current.timer != old.timer)
 			{
 				//Calculate game's slowdown scale
-				vars.multiplier = 1/current.game_speed;
+				if (current.stage != 1)
+					vars.multiplier = 1/current.game_speed;
+				else
+					vars.multiplier = 1/current.bunta_speed;
+				
 				if (current.timer > old.timer)
 				{
 					vars.game_time += (current.timer-old.timer)*(vars.multiplier/vars.fps);
@@ -65,7 +72,6 @@ update
 			vars.game_time += 1/vars.fps;
 		}
 	}
-	vars.practice = settings["practice_mode"];
 }
 
 isLoading
@@ -80,10 +86,6 @@ gameTime
 
 reset
 {
-	if (current.stage == 0 && current.mode == 130 && old.mode == 128)
-	{
-		vars.started = false;
-	}
 	return current.stage == 0 && current.mode == 130 && old.mode == 128;
 }
 
@@ -94,10 +96,9 @@ split
 
 start
 {
-	if ((current.stage == 0 || settings["practice_mode"]) && current.mode == 130 && old.mode == 128)
+	if (current.stage == 0 && current.mode == 130 && old.mode == 128)
 	{
 		vars.game_time = 0;
-		vars.started = true;
 	}
-	return (current.stage == 0 || settings["practice_mode"]) && current.mode == 130 && old.mode == 128;
+	return current.stage == 0 && current.mode == 130 && old.mode == 128;
 }
