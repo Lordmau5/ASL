@@ -13,36 +13,40 @@ state("電車でＤ_LightningStage")
 	
 	//Apparently game uses this value to determine game speed in Masked Bunta :thinking:
 	float bunta_speed : 0x167EE4, 0x60, 0x18, 0x698, 0x65C;
+	
+	//Values to fix Nakazato for NG+
+	byte baka_fix : 0x167EE4, 0x30, 0xC, 0x240, 0x44;
+	byte camera_mode : 0x167EE4, 0x30, 0xC, 0x288, 0x470;
 }
 
 startup
 {
 	vars.game_time = 0;
-	vars.started = false;
+	vars.nakazato_hotfix = false;
 	vars.multiplier = 1;
 	vars.fps = 60.0f;
 }
 
-init
-{
-	vars.nakazato_hotfix = false;
-}
-
 update
 {
-	//Reset game time value if real time was reset
+	//Reworked Nakazato hotfix
+	if (!vars.nakazato_hotfix && current.stage == 2)
+	{
+		vars.nakazato_hotfix = (current.baka_fix == 20 && current.camera_mode == 11);
+	}
+	else if (current.stage != 2)
+	{
+		vars.nakazato_hotfix = false;
+	}
+	
+	//Reset variables if timer was reset
 	if (timer.CurrentTime.RealTime.HasValue)
 	{
 		if (timer.CurrentTime.RealTime.Value.Ticks == 0)
+		{
 			vars.game_time = 0;
-	}
-	
-	if((old.cleared & 4) == 0 && (current.cleared & 4) == 4) { // Nakazato Hotfix
-		vars.nakazato_hotfix = true;
-	}
-
-	if(vars.nakazato_hotfix && old.mode != 130 && current.mode == 130) {
-		vars.nakazato_hotfix = false;
+			vars.nakazato_hotfix = false;
+		}
 	}
 	
 	if (!(current.mode != 130 || vars.nakazato_hotfix))
